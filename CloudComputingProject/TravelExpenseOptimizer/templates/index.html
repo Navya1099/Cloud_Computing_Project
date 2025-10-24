@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Expense Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .destination-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .destination-info.active {
+            display: block;
+        }
+
+        .destination-info h3 {
+            margin-bottom: 5px;
+        }
+
+        .search-form {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .section-title {
+            color: #667eea;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            font-size: 1.8em;
+        }
+
+        .packages {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .package-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .package-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .package-card.best {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .package-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .best-deal-badge {
+            background: #ffd700;
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .total-price {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .package-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .package-card.best .detail-item {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .detail-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .option-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: border-color 0.3s, transform 0.3s;
+        }
+
+        .option-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+        }
+
+        .option-title {
+            color: #333;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .option-price {
+            color: #667eea;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .option-details {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .activity-description {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #888;
+            font-style: italic;
+        }
+
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✈️ Travel Expense Optimizer</h1>
+        <p class="subtitle">Find the best combination of flights, hotels, and activities for your budget</p>
+
+        <div class="destination-info" id="destinationInfo"></div>
+
+        <div class="error" id="error"></div>
+
+        <form class="search-form" id="searchForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="origin">Origin Airport Code</label>
+                    <input type="text" id="origin" placeholder="e.g., JFK, LAX" required maxlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="destination">Destination Airport Code</label>
+                    <input type="text" id="destination" placeholder="e.g., CDG, BKK" required maxlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="checkIn">Check-in Date</label>
+                    <input type="date" id="checkIn" required>
+                </div>
+                <div class="form-group">
+                    <label for="checkOut">Check-out Date</label>
+                    <input type="date" id="checkOut" required>
+                </div>
+                <div class="form-group">
+                    <label for="adults">Number of Adults</label>
+                    <input type="number" id="adults" value="1" min="1" max="9" required>
+                </div>
+            </div>
+            <button type="submit" class="search-btn">Search Best Deals</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Searching for the best travel deals...</p>
+        </div>
+
+        <div class="results" id="results">
+            <h2 class="section-title">🏆 Best Package Deals</h2>
+            <div class="packages" id="packages"></div>
+
+            <h2 class="section-title">✈️ Flight Options</h2>
+            <div class="options-grid" id="flights"></div>
+
+            <h2 class="section-title">🏨 Hotel Options</h2>
+            <div class="options-grid" id="hotels"></div>
+
+            <h2 class="section-title">🎭 Activities & Attractions</h2>
+            <div class="options-grid" id="activities"></div>
+        </div>
+    </div>
+
+    <script>
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('checkIn').setAttribute('min', today);
+        document.getElementById('checkOut').setAttribute('min', today);
+
+        // Update check-out minimum date when check-in changes
+        document.getElementById('checkIn').addEventListener('change', function() {
+            const checkInDate = new Date(this.value);
+            checkInDate.setDate(checkInDate.getDate() + 1);
+            document.getElementById('checkOut').setAttribute('min', checkInDate.toISOString().split('T')[0]);
+        });
+
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const origin = document.getElementById('origin').value.toUpperCase();
+            const destination = document.getElementById('destination').value.toUpperCase();
+            const checkIn = document.getElementById('checkIn').value;
+            const checkOut = document.getElementById('checkOut').value;
+            const adults = document.getElementById('adults').value;
+
+            // Show loading, hide results and errors
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('destinationInfo').classList.remove('active');
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ origin, destination, checkIn, checkOut, adults })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                document.getElementById('error').textContent = 'Error: ' + error.message + '. Please check your API credentials and try again.';
+                document.getElementById('error').classList.add('active');
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        });
+
+        function displayResults(data) {
+            // Display destination info
+            if (data.destination) {
+                const destInfo = document.getElementById('destinationInfo');
+                destInfo.innerHTML = `
+                    <h3>📍 Destination: ${data.destination.city || 'Unknown City'}, ${data.destination.country || ''}</h3>
+                    <p>Activities and attractions from this location</p>
+                `;
+                destInfo.classList.add('active');
+            }
+
+            // Display packages
+            const packagesContainer = document.getElementById('packages');
+            packagesContainer.innerHTML = '';
+            
+            if (data.packages && data.packages.length > 0) {
+                data.packages.forEach((pkg, index) => {
+                    const isBest = index === 0;
+                    packagesContainer.innerHTML += `
+                        <div class="package-card ${isBest ? 'best' : ''}">
+                            <div class="package-header">
+                                ${isBest ? '<span class="best-deal-badge">🏆 BEST DEAL</span>' : ''}
+                                <div class="total-price">${pkg.currency} ${pkg.total_cost.toFixed(2)}</div>
+                            </div>
+                            <div class="package-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Flight</div>
+                                    <div class="detail-value">${pkg.flight.airline} - ${pkg.currency} ${pkg.flight.price.toFixed(2)}</div>
+                                    <div class="detail-label">${pkg.flight.stops} stop(s)</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Hotel</div>
+                                    <div class="detail-value">${pkg.hotel.name}</div>
+                                    <div class="detail-label">${pkg.currency} ${pkg.hotel.price_per_night.toFixed(2)}/night</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Food (Estimated)</div>
+                                    <div class="detail-value">${pkg.currency} ${pkg.estimated_food_cost.toFixed(2)}</div>
+                                    <div class="detail-label">${data.duration} days</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Activities</div>
+                                    <div class="detail-value">${pkg.currency} ${pkg.activities_cost.toFixed(2)}</div>
+                                    <div class="detail-label">Optional</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                packagesContainer.innerHTML = '<p>No packages available</p>';
+            }
+
+            // Display flights
+            const flightsContainer = document.getElementById('flights');
+            flightsContainer.innerHTML = '';
+            if (data.flights && data.flights.length > 0) {
+                data.flights.forEach(flight => {
+                    flightsContainer.innerHTML += `
+                        <div class="option-card">
+                            <div class="option-title">✈️ ${flight.airline}</div>
+                            <div class="option-price">${flight.currency} ${flight.price.toFixed(2)}</div>
+                            <div class="option-details">
+                                Duration: ${flight.duration}<br>
+                                Stops: ${flight.stops}<br>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                flightsContainer.innerHTML = '<p>No flights available</p>';
+            }
+
+            // Display hotels
+            const hotelsContainer = document.getElementById('hotels');
+            hotelsContainer.innerHTML = '';
+            if (data.hotels && data.hotels.length > 0) {
+                data.hotels.forEach(hotel => {
+                    hotelsContainer.innerHTML += `
+                        <div class="option-card">
+                            <div class="option-title">🏨 ${hotel.name}</div>
+                            <div class="option-price">${hotel.currency} ${hotel.price_per_night.toFixed(2)}/night</div>
+                            <div class="option-details">
+                                Total: ${hotel.currency} ${hotel.total_price.toFixed(2)}<br>
+                                For ${data.duration} nights
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                hotelsContainer.innerHTML = '<p>No hotels available</p>';
+            }
+
+            // Display activities
+            const activitiesContainer = document.getElementById('activities');
+            activitiesContainer.innerHTML = '';
+            if (data.activities && data.activities.length > 0) {
+                data.activities.forEach(activity => {
+                    activitiesContainer.innerHTML += `
+                        <div class="option-card">
+                            <div class="option-title">🎭 ${activity.name}</div>
+                            <div class="option-price">${activity.currency} ${activity.price.toFixed(2)}</div>
+                            <div class="option-details">
+                                Type: ${activity.type}
+                                ${activity.description ? '<div class="activity-description">' + activity.description + '</div>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                activitiesContainer.innerHTML = '<p>No activities available for this destination. Try a different location.</p>';
+            }
+
+            document.getElementById('results').classList.add('active');
+        }
+    </script>
+</body>
+</html>
