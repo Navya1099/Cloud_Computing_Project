@@ -1,17 +1,97 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import requests
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from auth import auth_bp, login_required
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+
+# Register authentication blueprint
+app.register_blueprint(auth_bp)
 
 # Amadeus API Configuration
 AMADEUS_API_KEY = os.getenv('AMADEUS_API_KEY', 'YOUR_API_KEY')
 AMADEUS_API_SECRET = os.getenv('AMADEUS_API_SECRET', 'YOUR_API_SECRET')
 AMADEUS_BASE_URL = 'https://test.api.amadeus.com'
+DEFAULT_CURRENCY = 'GBP'
+
+# Airline code to full name mapping
+AIRLINE_NAMES = {
+    'AA': 'American Airlines',
+    'BA': 'British Airways',
+    'CA': 'Air China',
+    'CX': 'Cathay Pacific',
+    'DL': 'Delta Air Lines',
+    'EK': 'Emirates',
+    'EY': 'Etihad Airways',
+    'LH': 'Lufthansa',
+    'QF': 'Qantas',
+    'QR': 'Qatar Airways',
+    'SQ': 'Singapore Airlines',
+    'TG': 'Thai Airways',
+    'UA': 'United Airlines',
+    'VS': 'Virgin Atlantic',
+    'AF': 'Air France',
+    'KL': 'KLM',
+    'NH': 'ANA',
+    'JL': 'Japan Airlines',
+    'CZ': 'China Southern',
+    'MU': 'China Eastern',
+    'TR': 'Scoot',
+    'AK': 'AirAsia',
+    'FD': 'Thai AirAsia',
+    'SU': 'Aeroflot',
+    'TK': 'Turkish Airlines',
+    'LX': 'Swiss',
+    'OS': 'Austrian Airlines',
+    'IB': 'Iberia',
+    'AZ': 'ITA Airways',
+    'KE': 'Korean Air',
+    'OZ': 'Asiana Airlines',
+    'BR': 'EVA Air',
+    'CI': 'China Airlines',
+    'MH': 'Malaysia Airlines',
+    'GA': 'Garuda Indonesia',
+    'PR': 'Philippine Airlines',
+    'VN': 'Vietnam Airlines',
+    'AI': 'Air India',
+    'EI': 'Aer Lingus',
+    'SK': 'SAS',
+    'AY': 'Finnair',
+    'TP': 'TAP Portugal',
+    'WN': 'Southwest Airlines',
+    'B6': 'JetBlue',
+    'AS': 'Alaska Airlines',
+    'AC': 'Air Canada',
+    'WS': 'WestJet',
+    'LA': 'LATAM',
+    'AM': 'Aeromexico',
+    'AV': 'Avianca',
+    'CM': 'Copa Airlines',
+    'SA': 'South African Airways',
+    'ET': 'Ethiopian Airlines',
+    'MS': 'EgyptAir',
+    'RJ': 'Royal Jordanian',
+    'GF': 'Gulf Air',
+    'WY': 'Oman Air',
+    'UL': 'SriLankan Airlines',
+    'PK': 'Pakistan International',
+    'BG': 'Biman Bangladesh',
+    'SV': 'Saudia',
+    'FZ': 'flydubai',
+    'G9': 'Air Arabia',
+    'UK': 'Vistara',
+    '6E': 'IndiGo',
+    'SG': 'SpiceJet',
+}
+
+def get_airline_name(code):
+    """Get full airline name from code"""
+    return AIRLINE_NAMES.get(code, code)
 
 class AmadeusAPI:
     def __init__(self):
@@ -90,6 +170,7 @@ class AmadeusAPI:
             'departureDate': departure_date,
             'returnDate': return_date,
             'adults': adults,
+            'currencyCode': DEFAULT_CURRENCY,
             'max': 10
         }
         
@@ -129,7 +210,8 @@ class AmadeusAPI:
                 'hotelIds': ','.join(hotel_ids),
                 'checkInDate': check_in,
                 'checkOutDate': check_out,
-                'adults': adults
+                'adults': adults,
+                'currency': DEFAULT_CURRENCY
             }
             
             offers_response = requests.get(offers_url, headers=headers, params=offers_params)
@@ -184,9 +266,10 @@ class AmadeusAPI:
 amadeus_api = AmadeusAPI()
 
 @app.route('/')
+@login_required
 def index():
-    """Home page"""
-    return render_template('index.html')
+    """Home page - requires login"""
+    return render_template('index.html', username=session.get('user_id'))
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -234,60 +317,96 @@ def search():
         return jsonify({'error': str(e)}), 500
 
 def process_results(flights, hotels, activities, duration, adults, destination_info=None):
-    """Process and combine all travel data"""
+    """Process and combine all travel data - uses destination currency for consistency"""
     flight_options = []
     hotel_options = []
     activity_options = []
+    seen_flights = set()  # Track unique flights
+    seen_hotels = set()   # Track unique hotels
     
-    # Process flights
+    # Determine destination currency from hotels (most reliable for destination)
+    destination_currency = DEFAULT_CURRENCY
+    if hotels and 'data' in hotels and len(hotels['data']) > 0:
+        first_hotel = hotels['data'][0]
+        if 'offers' in first_hotel and first_hotel['offers']:
+            destination_currency = first_hotel['offers'][0]['price'].get('currency', DEFAULT_CURRENCY)
+    
+    # Process flights (deduplicate by airline + price + stops)
+    # Keep original currency for flights as they're booked from origin
     if flights and 'data' in flights:
         for flight in flights['data'][:10]:
-            flight_options.append({
-                'id': flight.get('id'),
-                'price': float(flight['price']['total']),
-                'currency': flight['price']['currency'],
-                'airline': flight['validatingAirlineCodes'][0] if flight.get('validatingAirlineCodes') else 'N/A',
-                'duration': flight['itineraries'][0].get('duration', 'N/A'),
-                'stops': len(flight['itineraries'][0]['segments']) - 1,
-                'details': flight
-            })
+            airline_code = flight['validatingAirlineCodes'][0] if flight.get('validatingAirlineCodes') else 'N/A'
+            airline_name = get_airline_name(airline_code)
+            price = float(flight['price']['total'])
+            currency = flight['price'].get('currency', DEFAULT_CURRENCY)
+            stops = len(flight['itineraries'][0]['segments']) - 1
+            flight_key = (airline_code, price, stops)
+            
+            if flight_key not in seen_flights:
+                seen_flights.add(flight_key)
+                flight_options.append({
+                    'id': flight.get('id'),
+                    'price': price,
+                    'currency': currency,
+                    'airline_code': airline_code,
+                    'airline': airline_name,
+                    'duration': flight['itineraries'][0].get('duration', 'N/A'),
+                    'stops': stops,
+                    'details': flight
+                })
     
-    # Process hotels
+    # Process hotels (deduplicate by name + price) - uses destination currency
     if hotels and 'data' in hotels:
         for hotel in hotels['data'][:10]:
             if 'offers' in hotel and hotel['offers']:
                 offer = hotel['offers'][0]
-                hotel_options.append({
-                    'id': hotel.get('hotel', {}).get('hotelId'),
-                    'name': hotel.get('hotel', {}).get('name', 'Unknown Hotel'),
-                    'price_per_night': float(offer['price']['total']),
-                    'total_price': float(offer['price']['total']) * duration,
-                    'currency': offer['price']['currency'],
-                    'details': hotel
-                })
+                # The API returns total price for entire stay
+                total_price = float(offer['price']['total'])
+                currency = offer['price'].get('currency', destination_currency)
+                hotel_name = hotel.get('hotel', {}).get('name', 'Unknown Hotel')
+                hotel_key = (hotel_name, total_price)
+                
+                if hotel_key not in seen_hotels:
+                    seen_hotels.add(hotel_key)
+                    # Calculate per-night price
+                    price_per_night = total_price / duration if duration > 0 else total_price
+                    hotel_options.append({
+                        'id': hotel.get('hotel', {}).get('hotelId'),
+                        'name': hotel_name,
+                        'price_per_night': price_per_night,
+                        'total_price': total_price,
+                        'currency': currency,
+                        'details': hotel
+                    })
     
-    # Process activities (restaurants, attractions)
+    # Process activities - use destination currency
     if activities and 'data' in activities:
         for activity in activities['data'][:10]:
+            # Get original price and currency
+            original_price = float(activity.get('price', {}).get('amount', 0))
+            original_currency = activity.get('price', {}).get('currencyCode', destination_currency)
+            
             activity_options.append({
                 'id': activity.get('id'),
                 'name': activity.get('name', 'Unknown Activity'),
-                'price': float(activity.get('price', {}).get('amount', 0)),
-                'currency': activity.get('price', {}).get('currencyCode', 'USD'),
+                'price': original_price,
+                'currency': destination_currency,  # Display in destination currency
+                'original_currency': original_currency,
                 'type': activity.get('type', 'activity'),
                 'description': activity.get('shortDescription', 'No description available'),
                 'details': activity
             })
     
     # Calculate total costs for different combinations
-    packages = calculate_best_packages(flight_options, hotel_options, activity_options, duration, adults)
+    packages = calculate_best_packages(flight_options, hotel_options, activity_options, duration, adults, destination_currency)
     
     result = {
         'flights': flight_options,
         'hotels': hotel_options,
         'activities': activity_options,
         'packages': packages,
-        'duration': duration
+        'duration': duration,
+        'destination_currency': destination_currency
     }
     
     # Add destination info if available
@@ -301,43 +420,35 @@ def process_results(flights, hotels, activities, duration, adults, destination_i
     
     return result
 
-def calculate_best_packages(flights, hotels, activities, duration, adults):
-    """Calculate best package combinations"""
+def calculate_best_packages(flights, hotels, activities, duration, adults, destination_currency):
+    """Calculate best package combinations using destination currency for hotels/activities"""
     packages = []
     
     # Ensure we have data
     if not flights or not hotels:
         return packages
     
-    # Calculate estimated daily food/restaurant costs (approximate)
-    avg_daily_food_cost = 50 * adults  # $50 per person per day
-    
     # Create packages with different flight and hotel combinations
     for flight in flights[:3]:  # Top 3 flights
         for hotel in hotels[:3]:  # Top 3 hotels
-            # Calculate activity costs (optional activities)
-            activity_cost = sum([a['price'] for a in activities[:5]]) if activities else 0
-            
-            total_cost = (
-                flight['price'] + 
-                hotel['total_price'] + 
-                (avg_daily_food_cost * duration) +
-                activity_cost
-            )
+            # Calculate total in destination currency (hotel + activities)
+            # Flight stays in its original currency since booked from origin
+            destination_total = hotel['total_price']
+            if activities:
+                destination_total += sum([a['price'] for a in activities[:5]])
             
             packages.append({
                 'flight': flight,
                 'hotel': hotel,
-                'estimated_food_cost': avg_daily_food_cost * duration,
-                'activities_cost': activity_cost,
-                'total_cost': total_cost,
-                'currency': flight['currency']
+                'destination_total': destination_total,
+                'destination_currency': destination_currency
             })
     
-    # Sort packages by total cost
-    packages.sort(key=lambda x: x['total_cost'])
+    # Sort packages by hotel price (destination currency)
+    packages.sort(key=lambda x: x['hotel']['total_price'])
     
-    return packages
+    # Return only top 5 unique packages
+    return packages[:5]
 
 @app.route('/api/test', methods=['GET'])
 def test_api():
