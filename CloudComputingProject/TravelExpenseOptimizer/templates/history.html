@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search History - Travel Expense Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .nav-link:hover {
+            background: #f0f0ff;
+        }
+
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .user-info {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-name {
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-name:hover {
+            background: #f0f0ff;
+        }
+
+        .dropdown-arrow {
+            font-size: 10px;
+            transition: transform 0.3s;
+        }
+
+        .user-dropdown:hover .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .user-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 12px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f0ff;
+            color: #667eea;
+        }
+
+        .dropdown-item.logout {
+            color: #e74c3c;
+        }
+
+        .dropdown-item.logout:hover {
+            background: #fdf2f2;
+            color: #c0392b;
+        }
+
+        .history-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .history-card {
+            background: #f8f9ff;
+            border: 2px solid #e0e5ff;
+            border-radius: 15px;
+            padding: 25px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .history-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .route-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .route-info h3 {
+            color: #333;
+            font-size: 1.4em;
+        }
+
+        .route-arrow {
+            color: #667eea;
+            font-size: 1.5em;
+        }
+
+        .search-date {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .trip-dates {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .date-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .date-label {
+            color: #888;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+
+        .date-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .best-deal {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+        }
+
+        .best-deal-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .best-deal-header h4 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .deal-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .deal-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .deal-item-label {
+            font-size: 0.8em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .deal-item-value {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .total-section {
+            grid-column: span 2;
+            background: rgba(255, 255, 255, 0.25);
+            text-align: center;
+            padding: 15px;
+        }
+
+        .total-label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .total-value {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .no-history {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-history-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .no-history h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .search-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+
+        .search-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .delete-btn:hover {
+            background: #ff3344;
+            transform: scale(1.05);
+        }
+
+        .delete-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .user-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .deal-details {
+                grid-template-columns: 1fr;
+            }
+
+            .total-section {
+                grid-column: span 1;
+            }
+
+            .route-info {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-header">
+            <div class="nav-links">
+                <a href="/" class="nav-link">🔍 Search</a>
+                <a href="/history" class="nav-link active">📜 History</a>
+            </div>
+            <div class="user-info">
+                <div class="user-dropdown">
+                    <span class="user-name">👤 {{ username }} <span class="dropdown-arrow">▼</span></span>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">⚙️ Profile Settings</a>
+                        <a href="/logout" class="dropdown-item logout">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h1>📜 Search History</h1>
+        <p class="subtitle">Your saved best deals from previous searches</p>
+
+        {% if history %}
+        <div class="history-grid">
+            {% for item in history %}
+            <div class="history-card" id="history-{{ item.id }}">
+                <div class="history-header">
+                    <div class="route-info">
+                        <h3>{{ item.origin }}</h3>
+                        <span class="route-arrow">✈️ →</span>
+                        <h3>{{ item.destination }}</h3>
+                    </div>
+                    <div class="header-actions">
+                        <span class="search-date">{{ item.searched_at[:10] if item.searched_at else 'N/A' }}</span>
+                        <button class="delete-btn" onclick="deleteHistory('{{ item.id }}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+
+                <div class="trip-dates">
+                    <div class="date-item">
+                        <span class="date-label">Departure</span>
+                        <span class="date-value">{{ item.departure_date }}</span>
+                    </div>
+                    <div class="date-item">
+                        <span class="date-label">Return</span>
+                        <span class="date-value">{{ item.return_date }}</span>
+                    </div>
+                    <div class="date-item">
+                        <span class="date-label">Travelers</span>
+                        <span class="date-value">{{ item.adults }} Adult(s)</span>
+                    </div>
+                </div>
+
+                {% if item.best_package %}
+                <div class="best-deal">
+                    <div class="best-deal-header">
+                        <span>🏆</span>
+                        <h4>Best Deal Found</h4>
+                    </div>
+                    <div class="deal-details">
+                        <div class="deal-item">
+                            <div class="deal-item-label">✈️ Flight</div>
+                            <div class="deal-item-value">
+                                {{ item.best_package.flight.airline or 'N/A' }}
+                            </div>
+                            <div style="font-size: 0.9em; opacity: 0.9;">
+                                {{ item.best_package.flight.currency or '' }} {{ item.best_package.flight.price or 'N/A' }}
+                                {% if item.best_package.flight.stops is not none %}
+                                    ({{ item.best_package.flight.stops }} stop{% if item.best_package.flight.stops != 1 %}s{% endif %})
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="deal-item">
+                            <div class="deal-item-label">🏨 Hotel</div>
+                            <div class="deal-item-value">
+                                {{ item.best_package.hotel.name or 'N/A' }}
+                            </div>
+                            <div style="font-size: 0.9em; opacity: 0.9;">
+                                {{ item.best_package.hotel.currency or '' }} {{ item.best_package.hotel.price_per_night or 'N/A' }}/night
+                            </div>
+                        </div>
+                        <div class="deal-item total-section">
+                            <div class="total-label">Hotel Total ({{ item.best_package.destination_currency or 'N/A' }})</div>
+                            <div class="total-value">
+                                {{ item.best_package.hotel.currency or '' }} {{ "%.2f"|format(item.best_package.hotel.total_price) if item.best_package.hotel.total_price else 'N/A' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="best-deal" style="background: #888;">
+                    <p style="text-align: center;">No package deal found for this search</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-history">
+            <div class="no-history-icon">📭</div>
+            <h3>No Search History Yet</h3>
+            <p>Start searching for travel deals to build your history!</p>
+            <a href="/" class="search-btn">Start Searching</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function deleteHistory(historyId) {
+            if (!confirm('Are you sure you want to delete this search history?')) {
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch(`/api/history/${historyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Remove the card with animation
+                    const card = document.getElementById(`history-${historyId}`);
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(-20px)';
+                    
+                    setTimeout(() => {
+                        card.remove();
+                        
+                        // Check if no more history items
+                        const grid = document.querySelector('.history-grid');
+                        if (grid && grid.children.length === 0) {
+                            location.reload();
+                        }
+                    }, 300);
+                } else {
+                    alert('Failed to delete: ' + (data.message || 'Unknown error'));
+                    button.disabled = false;
+                    button.textContent = '🗑️ Delete';
+                }
+            } catch (error) {
+                alert('Error deleting history: ' + error.message);
+                button.disabled = false;
+                button.textContent = '🗑️ Delete';
+            }
+        }
+    </script>
+</body>
+</html>

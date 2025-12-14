@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Travel Expense Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .nav-link:hover {
+            background: #f0f0ff;
+        }
+
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .user-info {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-name {
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-name:hover {
+            background: #f0f0ff;
+        }
+
+        .dropdown-arrow {
+            font-size: 10px;
+            transition: transform 0.3s;
+        }
+
+        .user-dropdown:hover .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .user-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 12px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f0ff;
+            color: #667eea;
+        }
+
+        .dropdown-item.logout {
+            color: #e74c3c;
+        }
+
+        .dropdown-item.logout:hover {
+            background: #fdf2f2;
+            color: #c0392b;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 3em;
+            color: white;
+        }
+
+        .profile-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input:disabled {
+            background: #f5f5f5;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .input-hint {
+            font-size: 0.85em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-top: 10px;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .save-btn:active {
+            transform: translateY(0);
+        }
+
+        .save-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-message {
+            background: #ffe0e0;
+            color: #d32f2f;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #e0f7e0;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 30px 0;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .password-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .password-container {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .change-password-btn {
+            width: 100%;
+            padding: 15px;
+            background: #f5f5f5;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .change-password-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .account-info {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e5ff;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .user-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-header">
+            <div class="nav-links">
+                <a href="/" class="nav-link">🔍 Search</a>
+                <a href="/history" class="nav-link">📜 History</a>
+            </div>
+            <div class="user-info">
+                <div class="user-dropdown">
+                    <span class="user-name">👤 {{ username }} <span class="dropdown-arrow">▼</span></span>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">⚙️ Profile Settings</a>
+                        <a href="/logout" class="dropdown-item logout">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-avatar">
+            {{ username[0]|upper if username else '?' }}
+        </div>
+
+        <h1>👤 My Profile</h1>
+        <p class="subtitle">Manage your account settings</p>
+
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+
+        {% if success %}
+        <div class="success-message">{{ success }}</div>
+        {% endif %}
+
+        <div class="account-info">
+            <div class="info-row">
+                <span class="info-label">Username</span>
+                <span class="info-value">{{ username }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Member Since</span>
+                <span class="info-value">{{ created_at or 'N/A' }}</span>
+            </div>
+        </div>
+
+        <form class="profile-form" method="POST" action="{{ url_for('auth.profile') }}">
+            <input type="hidden" name="action" value="update_profile">
+            
+            <h3 class="section-title">📝 Update Email</h3>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" 
+                       value="{{ email }}" 
+                       placeholder="Enter your email address" required>
+                <p class="input-hint">Used for account notifications</p>
+            </div>
+
+            <button type="submit" class="save-btn">💾 Save Changes</button>
+        </form>
+
+        <div class="password-section">
+            <h3 class="section-title">🔐 Change Password</h3>
+            
+            <form method="POST" action="{{ url_for('auth.profile') }}">
+                <input type="hidden" name="action" value="change_password">
+                
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <div class="password-container">
+                        <input type="password" id="current_password" name="current_password" 
+                               placeholder="Enter current password">
+                        <button type="button" class="toggle-password" onclick="togglePassword('current_password', this)">👁️</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <div class="password-container">
+                        <input type="password" id="new_password" name="new_password" 
+                               placeholder="Enter new password">
+                        <button type="button" class="toggle-password" onclick="togglePassword('new_password', this)">👁️</button>
+                    </div>
+                    <p class="input-hint">Minimum 6 characters</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <div class="password-container">
+                        <input type="password" id="confirm_password" name="confirm_password" 
+                               placeholder="Confirm new password">
+                        <button type="button" class="toggle-password" onclick="togglePassword('confirm_password', this)">👁️</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="change-password-btn">🔐 Change Password</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
+    </script>
+</body>
+</html>

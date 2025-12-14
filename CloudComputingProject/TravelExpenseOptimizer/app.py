@@ -3,7 +3,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from auth import auth_bp, login_required
+from auth import auth_bp, login_required, save_search_history, get_search_history, delete_history_item
 
 load_dotenv()
 
@@ -14,8 +14,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-product
 app.register_blueprint(auth_bp)
 
 # Amadeus API Configuration
-AMADEUS_API_KEY = os.getenv('AMADEUS_API_KEY', 'YOUR_API_KEY')
-AMADEUS_API_SECRET = os.getenv('AMADEUS_API_SECRET', 'YOUR_API_SECRET')
+# These will be set via environment variables or Secret Manager on GCP
+AMADEUS_API_KEY = os.environ.get('AMADEUS_API_KEY', 'YOUR_API_KEY')
+AMADEUS_API_SECRET = os.environ.get('AMADEUS_API_SECRET', 'YOUR_API_SECRET')
 AMADEUS_BASE_URL = 'https://test.api.amadeus.com'
 DEFAULT_CURRENCY = 'GBP'
 
@@ -164,23 +165,34 @@ class AmadeusAPI:
         
         url = f"{AMADEUS_BASE_URL}/v2/shopping/flight-offers"
         headers = {'Authorization': f'Bearer {token}'}
+        # Don't force currency - let Amadeus return natural currency for the route
         params = {
             'originLocationCode': origin,
             'destinationLocationCode': destination,
             'departureDate': departure_date,
             'returnDate': return_date,
             'adults': adults,
-            'currencyCode': DEFAULT_CURRENCY,
             'max': 10
         }
         
         try:
             response = requests.get(url, headers=headers, params=params)
+            if response.status_code != 200:
+                print(f"Flight API error: {response.status_code} - {response.text}")
+                # Return special indicator for API issues vs no flights
+                try:
+                    error_data = response.json()
+                    if error_data.get('errors'):
+                        error_code = error_data['errors'][0].get('code')
+                        if error_code == 141:  # System error - Amadeus test API limitation
+                            return {'api_error': 'Flight search temporarily unavailable (Amadeus test API limitation)'}
+                except:
+                    pass
             response.raise_for_status()
             return response.json()
         except Exception as e:
             print(f"Error searching flights: {e}")
-            return None
+            return {'api_error': 'Flight search service unavailable'}
     
     def search_hotels(self, city_code, check_in, check_out, adults=1):
         """Search for hotels"""
@@ -312,6 +324,35 @@ def search():
         # Process and combine results
         results = process_results(flights, hotels, activities, duration, adults, destination_location)
         
+        # Save search history with best deal if user is logged in
+        if 'user_id' in session and results.get('packages'):
+            best_package = results['packages'][0] if results['packages'] else None
+            if best_package:
+                history_data = {
+                    'origin': origin,
+                    'destination': destination,
+                    'departure_date': check_in,
+                    'return_date': check_out,
+                    'adults': adults,
+                    'best_package': {
+                        'flight': {
+                            'airline': best_package['flight'].get('airline'),
+                            'price': best_package['flight'].get('price'),
+                            'currency': best_package['flight'].get('currency'),
+                            'stops': best_package['flight'].get('stops')
+                        },
+                        'hotel': {
+                            'name': best_package['hotel'].get('name'),
+                            'price_per_night': best_package['hotel'].get('price_per_night'),
+                            'total_price': best_package['hotel'].get('total_price'),
+                            'currency': best_package['hotel'].get('currency')
+                        },
+                        'destination_total': best_package.get('destination_total'),
+                        'destination_currency': best_package.get('destination_currency')
+                    }
+                }
+                save_search_history(session['user_id'], history_data)
+        
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -323,6 +364,12 @@ def process_results(flights, hotels, activities, duration, adults, destination_i
     activity_options = []
     seen_flights = set()  # Track unique flights
     seen_hotels = set()   # Track unique hotels
+    flight_api_error = None
+    
+    # Check for flight API error
+    if flights and 'api_error' in flights:
+        flight_api_error = flights['api_error']
+        flights = None  # Reset to prevent processing
     
     # Determine destination currency from hotels (most reliable for destination)
     destination_currency = DEFAULT_CURRENCY
@@ -409,6 +456,10 @@ def process_results(flights, hotels, activities, duration, adults, destination_i
         'destination_currency': destination_currency
     }
     
+    # Add flight API error message if present
+    if flight_api_error:
+        result['flight_api_error'] = flight_api_error
+    
     # Add destination info if available
     if destination_info:
         result['destination'] = {
@@ -449,6 +500,23 @@ def calculate_best_packages(flights, hotels, activities, duration, adults, desti
     
     # Return only top 5 unique packages
     return packages[:5]
+
+@app.route('/history')
+@login_required
+def history():
+    """Display search history page"""
+    user_history = get_search_history(session.get('user_id'))
+    return render_template('history.html', username=session.get('user_id'), history=user_history)
+
+@app.route('/api/history/<history_id>', methods=['DELETE'])
+@login_required
+def delete_history(history_id):
+    """Delete a history item"""
+    username = session.get('user_id')
+    if delete_history_item(username, history_id):
+        return jsonify({'status': 'success', 'message': 'History item deleted'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to delete history item'}), 500
 
 @app.route('/api/test', methods=['GET'])
 def test_api():

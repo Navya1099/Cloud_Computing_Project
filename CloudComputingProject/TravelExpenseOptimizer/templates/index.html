@@ -42,38 +42,117 @@
 
         .user-header {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
         }
 
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .nav-link:hover {
+            background: #f0f0ff;
+        }
+
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+
         .user-info {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 15px;
+        }
+
+        .user-dropdown {
+            position: relative;
         }
 
         .user-name {
             color: #667eea;
             font-weight: 600;
-        }
-
-        .logout-btn {
-            background: #f5f5f5;
-            color: #666;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
             cursor: pointer;
-            text-decoration: none;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 6px;
             transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .logout-btn:hover {
-            background: #e0e0e0;
+        .user-name:hover {
+            background: #f0f0ff;
+        }
+
+        .dropdown-arrow {
+            font-size: 10px;
+            transition: transform 0.3s;
+        }
+
+        .user-dropdown:hover .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .user-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 12px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: #f0f0ff;
+            color: #667eea;
+        }
+
+        .dropdown-item.logout {
+            color: #e74c3c;
+        }
+
+        .dropdown-item.logout:hover {
+            background: #fdf2f2;
+            color: #c0392b;
         }
 
         .destination-info {
@@ -375,9 +454,18 @@
 <body>
     <div class="container">
         <div class="user-header">
+            <div class="nav-links">
+                <a href="/" class="nav-link active">🔍 Search</a>
+                <a href="/history" class="nav-link">📜 History</a>
+            </div>
             <div class="user-info">
-                <span class="user-name">👤 {{ username }}</span>
-                <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+                <div class="user-dropdown">
+                    <span class="user-name">👤 {{ username }} <span class="dropdown-arrow">▼</span></span>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">⚙️ Profile Settings</a>
+                        <a href="{{ url_for('auth.logout') }}" class="dropdown-item logout">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -549,7 +637,15 @@
             // Display flights
             const flightsContainer = document.getElementById('flights');
             flightsContainer.innerHTML = '';
-            if (data.flights && data.flights.length > 0) {
+            
+            // Check for flight API error
+            if (data.flight_api_error) {
+                flightsContainer.innerHTML = `
+                    <div class="currency-notice" style="background: #fff3cd; border-color: #ffc107; color: #856404;">
+                        ⚠️ ${data.flight_api_error}. This is a known limitation of the Amadeus test API. Hotels and activities are still available.
+                    </div>
+                `;
+            } else if (data.flights && data.flights.length > 0) {
                 data.flights.forEach(flight => {
                     if (!flight) return;
                     const price = flight.price ? flight.price.toFixed(2) : '0.00';
