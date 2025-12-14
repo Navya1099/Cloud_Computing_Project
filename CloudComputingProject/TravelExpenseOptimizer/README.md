@@ -278,4 +278,4 @@ This project is for educational purposes - Cloud Computing Course Project.
 
 ## 👤 Author
 
-Cloud Computing Project - December 2025
+QMUL ECS781P - Cloud Computing - 2025/26 Group 6
