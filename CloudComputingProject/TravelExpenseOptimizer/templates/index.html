@@ -672,12 +672,13 @@
                     if (!hotel) return;
                     const pricePerNight = hotel.price_per_night ? hotel.price_per_night.toFixed(2) : '0.00';
                     const totalPrice = hotel.total_price ? hotel.total_price.toFixed(2) : '0.00';
+                    const hotelCurrency = hotel.currency || destCurrency;
                     hotelsContainer.innerHTML += `
                         <div class="option-card">
                             <div class="option-title">🏨 ${hotel.name || 'Unknown'}</div>
-                            <div class="option-price">${destCurrency} ${pricePerNight}/night</div>
+                            <div class="option-price">${hotelCurrency} ${pricePerNight}/night</div>
                             <div class="option-details">
-                                Total: ${destCurrency} ${totalPrice}<br>
+                                Total: ${hotelCurrency} ${totalPrice}<br>
                                 For ${data.duration} nights
                             </div>
                         </div>
@@ -694,10 +695,11 @@
                 data.activities.forEach(activity => {
                     if (!activity) return;
                     const price = activity.price ? activity.price.toFixed(2) : '0.00';
+                    const activityCurrency = activity.currency || 'USD';
                     activitiesContainer.innerHTML += `
                         <div class="option-card">
                             <div class="option-title">🎭 ${activity.name || 'Unknown'}</div>
-                            <div class="option-price">${destCurrency} ${price}</div>
+                            <div class="option-price">${activityCurrency} ${price}</div>
                             <div class="option-details">
                                 Type: ${activity.type || 'activity'}
                                 ${activity.description ? '<div class="activity-description">' + activity.description + '</div>' : ''}

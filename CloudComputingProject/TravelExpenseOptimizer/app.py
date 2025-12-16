@@ -426,19 +426,18 @@ def process_results(flights, hotels, activities, duration, adults, destination_i
                         'details': hotel
                     })
     
-    # Process activities - use destination currency
+    # Process activities - keep original currency from API
     if activities and 'data' in activities:
         for activity in activities['data'][:10]:
-            # Get original price and currency
+            # Get original price and currency from API
             original_price = float(activity.get('price', {}).get('amount', 0))
-            original_currency = activity.get('price', {}).get('currencyCode', destination_currency)
+            original_currency = activity.get('price', {}).get('currencyCode', 'USD')
             
             activity_options.append({
                 'id': activity.get('id'),
                 'name': activity.get('name', 'Unknown Activity'),
                 'price': original_price,
-                'currency': destination_currency,  # Display in destination currency
-                'original_currency': original_currency,
+                'currency': original_currency,  # Display in actual currency from API
                 'type': activity.get('type', 'activity'),
                 'description': activity.get('shortDescription', 'No description available'),
                 'details': activity
